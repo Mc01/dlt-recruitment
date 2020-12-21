@@ -190,10 +190,20 @@ contract CustomToken is ERC20Upgradeable, OwnableUpgradeable, ReentrancyGuardUpg
     }
 
     function _increaseBalance(address account, uint256 amount) internal {
+        // Not sure if this is the goal of max total supply
+        require(
+            uint256(totalSupply()).add(amount) <= _maxTotalSupply,
+            "Supply cannot exceed max limit!"
+        );
         _mint(account, amount);
     }
 
     function _decreaseBalance(address account, uint256 amount) internal {
+        // Not sure if this is the goal of min total supply
+        require(
+            uint256(totalSupply()).sub(amount) >= _minTotalSupply,
+            "Supply cannot exceed min limit!"
+        );
         _burn(account, amount);
     }
 }
