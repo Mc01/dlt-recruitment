@@ -1,14 +1,14 @@
-pragma solidity ^0.5.16;
+pragma solidity >=0.6.0 <0.8.0;
 
-import "./ERC20.sol";
-import "./Ownable.sol";
-import "./SafeMath.sol";
+import "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/math/SafeMathUpgradeable.sol";
 
 /**
  * @dev Extension of {ERC20} that adds staking mechanism.
  */
-contract CustomToken is ERC20, Ownable {
-    using SafeMath for uint64;
+contract CustomToken is ERC20Upgradeable, OwnableUpgradeable {
+    using SafeMathUpgradeable for uint64;
 
     uint256 internal _minTotalSupply;
     uint256 internal _maxTotalSupply;
@@ -31,7 +31,7 @@ contract CustomToken is ERC20, Ownable {
         uint8 stakePrecision
     ) public initializer
     {
-        Ownable.initialize(sender);
+        OwnableUpgradeable.initialize(sender);
 
         _minTotalSupply = minTotalSupply;
         _maxTotalSupply = maxTotalSupply;
@@ -97,7 +97,7 @@ contract CustomToken is ERC20, Ownable {
         uint256 _coinAge = _getCoinAge(_address, _now);
         if (_coinAge <= 0) return 0;
 
-        uint256 interest = getAnnualInterest();
+        uint256 interest = _getAnnualInterest();
         uint256 rewarded = (_coinAge * interest).div(365 * 10**_stakePrecision);
 
         return rewarded;
@@ -124,12 +124,10 @@ contract CustomToken is ERC20, Ownable {
     }
 
     function _increaseBalance(address account, uint256 amount) internal {
-        require(account != address(0), "Balance increase from the zero address");
-        _balances[account] = _balances[account].add(amount);
+        _mint(account, amount);
     }
 
     function _decreaseBalance(address account, uint256 amount) internal {
-        require(account != address(0), "Balance decrease from the zero address");
-        _balances[account] = _balances[account].sub(amount, "Balance decrease amount exceeds balance");
+        _burn(account, amount);
     }
 }

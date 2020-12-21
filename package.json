@@ -1,0 +1,13 @@
+{
+  "scripts": {
+    "compile": "truffle compile",
+    "migrate": "truffle migrate --network ganache",
+    "serve": "ganache-cli -e 1000000 -a 1000 -p 7545 > logs.txt",
+    "test": "truffle test --network ganache"
+  },
+  "dependencies": {
+    "@openzeppelin/contracts-upgradeable": "^3.3.0",
+    "ganache-cli": "^6.12.1",
+    "truffle": "^5.1.58"
+  }
+}
