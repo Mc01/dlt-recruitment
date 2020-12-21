@@ -1,13 +1,19 @@
 {
   "scripts": {
-    "compile": "truffle compile",
-    "migrate": "truffle migrate --network ganache",
-    "serve": "ganache-cli -e 1000000 -a 1000 -p 7545 > logs.txt",
-    "test": "truffle test --network ganache"
+    "clean": "hardhat clean",
+    "compile": "hardhat compile",
+    "console": "hardhat console",
+    "deploy": "hardhat run scripts/deploy.js",
+    "node": "hardhat node > logs.txt",
+    "test": "hardhat test"
   },
-  "dependencies": {
+  "devDependencies": {
+    "@nomiclabs/hardhat-ethers": "^2.0.1",
+    "@nomiclabs/hardhat-waffle": "^2.0.1",
     "@openzeppelin/contracts-upgradeable": "^3.3.0",
-    "ganache-cli": "^6.12.1",
-    "truffle": "^5.1.58"
+    "@openzeppelin/hardhat-upgrades": "^1.4.3",
+    "ethers": "^5.0.24",
+    "hardhat": "^2.0.6",
+    "hardhat-gas-reporter": "^1.0.3"
   }
 }

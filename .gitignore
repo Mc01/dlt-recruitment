@@ -64,3 +64,7 @@ project-config.js
 
 # logs
 logs.txt
+
+#Hardhat files
+cache
+artifacts

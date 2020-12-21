@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 pragma solidity >=0.6.0 <0.8.0;
 
 import "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
@@ -8,7 +9,7 @@ import "@openzeppelin/contracts-upgradeable/math/SafeMathUpgradeable.sol";
  * @dev Extension of {ERC20} that adds staking mechanism.
  */
 contract CustomToken is ERC20Upgradeable, OwnableUpgradeable {
-    using SafeMathUpgradeable for uint64;
+    using SafeMathUpgradeable for uint256;
 
     uint256 internal _minTotalSupply;
     uint256 internal _maxTotalSupply;
@@ -27,18 +28,20 @@ contract CustomToken is ERC20Upgradeable, OwnableUpgradeable {
     mapping(address => stakeStruct[]) internal _stakes;
 
     function initialize(
-        address sender, uint256 minTotalSupply, uint256 maxTotalSupply, uint64 stakeMinAge, uint64 stakeMaxAge,
+        uint256 minTotalSupply, 
+        uint256 maxTotalSupply, 
+        uint64 stakeMinAge, 
+        uint64 stakeMaxAge,
         uint8 stakePrecision
-    ) public initializer
-    {
-        OwnableUpgradeable.initialize(sender);
+    ) public initializer {
+        OwnableUpgradeable.__Ownable_init();
 
         _minTotalSupply = minTotalSupply;
         _maxTotalSupply = maxTotalSupply;
-        _mint(sender, minTotalSupply);
+        _mint(_msgSender(), minTotalSupply);
         _stakePrecision = uint256(stakePrecision);
 
-        _stakeStartTime = now;
+        _stakeStartTime = block.timestamp;
         _stakeMinAge = uint256(stakeMinAge);
         _stakeMaxAge = uint256(stakeMaxAge);
 
@@ -46,7 +49,9 @@ contract CustomToken is ERC20Upgradeable, OwnableUpgradeable {
         _stakeMinAmount = uint256(10**18);  // min stake of 1 token
     }
 
-    function stakeOf(address account) public view returns (uint256) {
+    function stakeOf(
+        address account
+    ) public view returns (uint256) {
         if (_stakes[account].length <= 0) return 0;
         uint256 stake = 0;
 
@@ -91,9 +96,9 @@ contract CustomToken is ERC20Upgradeable, OwnableUpgradeable {
     }
 
     function _getProofOfStakeReward(address _address) internal view returns (uint256) {
-        require((now >= _stakeStartTime) && (_stakeStartTime > 0));
+        require((block.timestamp >= _stakeStartTime) && (_stakeStartTime > 0));
 
-        uint256 _now = now;
+        uint256 _now = block.timestamp;
         uint256 _coinAge = _getCoinAge(_address, _now);
         if (_coinAge <= 0) return 0;
 
