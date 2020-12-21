@@ -107,7 +107,7 @@ contract CustomToken is ERC20Upgradeable, OwnableUpgradeable, ReentrancyGuardUpg
         
         // Update storage
         _stakesAmount[sender].push(amount);
-        _stakesTime[sender].push(block.timestamp);
+        _stakesTime[sender].push(uint64(block.timestamp));
     }
 
     function _unstake(address sender) internal {
@@ -123,8 +123,8 @@ contract CustomToken is ERC20Upgradeable, OwnableUpgradeable, ReentrancyGuardUpg
         }
 
         // Clear storage
-        _stakesAmount[sender] = [];
-        _stakesTime[sender] = [];
+        delete _stakesAmount[sender];
+        delete _stakesTime[sender];
 
         // Increase balance
         _increaseBalance(sender, cumulativeAmount);
@@ -137,10 +137,10 @@ contract CustomToken is ERC20Upgradeable, OwnableUpgradeable, ReentrancyGuardUpg
         );
 
         // Get reward
-        uint256 reward = _getProofOfStakeReward(_address);
+        uint256 rewarded = _getProofOfStakeReward(_address);
 
         // Increase balance
-        _increaseBalance(_address, reward);
+        _increaseBalance(_address, rewarded);
 
         // TODO: Set stake as withdrawn for this year
         // To do this optimally I'm leaving suggested change
