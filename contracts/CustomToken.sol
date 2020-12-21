@@ -20,12 +20,8 @@ contract CustomToken is ERC20Upgradeable, OwnableUpgradeable {
     uint256 internal _stakeMinAmount;
     uint256 internal _stakePrecision;
 
-    struct stakeStruct {
-        uint256 amount;
-        uint64 time;
-    }
-
-    mapping(address => stakeStruct[]) internal _stakes;
+    mapping(address => uint256[]) internal _stakesAmount;
+    mapping(address => uint64[]) internal _stakesTime;
 
     function initialize(
         uint256 minTotalSupply, 
@@ -52,17 +48,20 @@ contract CustomToken is ERC20Upgradeable, OwnableUpgradeable {
     function stakeOf(
         address account
     ) public view returns (uint256) {
-        if (_stakes[account].length <= 0) return 0;
+        if (_stakesAmount[account].length <= 0) return 0;
         uint256 stake = 0;
 
-        for (uint i = 0; i < _stakes[account].length; i++) {
-            stake = stake.add(uint256(_stakes[account][i].amount));
+        for (uint i = 0; i < _stakesAmount[account].length; i++) {
+            stake = stake.add(uint256(_stakesAmount[account][i]));
         }
         return stake;
     }
 
     function stakeAll() public returns (bool) {
-        _stake(_msgSender(), balanceOf(_msgSender()));
+        _stake(
+            _msgSender(), 
+            balanceOf(_msgSender())
+        );
         return true;
     }
 
@@ -96,29 +95,32 @@ contract CustomToken is ERC20Upgradeable, OwnableUpgradeable {
     }
 
     function _getProofOfStakeReward(address _address) internal view returns (uint256) {
-        require((block.timestamp >= _stakeStartTime) && (_stakeStartTime > 0));
+        require(
+            (block.timestamp >= _stakeStartTime) && (_stakeStartTime > 0),
+            "Stake start time should be greater than 0 and less or equal to block.timestamp"
+        );
 
         uint256 _now = block.timestamp;
         uint256 _coinAge = _getCoinAge(_address, _now);
         if (_coinAge <= 0) return 0;
 
         uint256 interest = _getAnnualInterest();
-        uint256 rewarded = (_coinAge * interest).div(365 * 10**_stakePrecision);
+        uint256 rewarded = (_coinAge.mul(interest)).div(uint256(365).mul(10**_stakePrecision));
 
         return rewarded;
     }
 
     function _getCoinAge(address _address, uint256 _now) internal view returns (uint256) {
-        if (_stakes[_address].length <= 0) return 0;
+        if (_stakesTime[_address].length <= 0) return 0;
         uint256 _coinAge = 0;
 
-        for (uint i = 0; i < _stakes[_address].length; i++) {
-            if (_now < uint256(_stakes[_address][i].time).add(_stakeMinAge)) continue;
+        for (uint i = 0; i < _stakesTime[_address].length; i++) {
+            if (_now < uint256(_stakesTime[_address][i]).add(_stakeMinAge)) continue;
 
-            uint256 nCoinSeconds = _now.sub(uint256(_stakes[_address][i].time));
+            uint256 nCoinSeconds = _now.sub(uint256(_stakesTime[_address][i]));
             if (nCoinSeconds > _stakeMaxAge) nCoinSeconds = _stakeMaxAge;
 
-            _coinAge = _coinAge.add(uint256(_stakes[_address][i].amount) * nCoinSeconds.div(1 days));
+            _coinAge = _coinAge.add(uint256(_stakesAmount[_address][i]).mul(nCoinSeconds.div(1 days)));
         }
 
         return _coinAge;

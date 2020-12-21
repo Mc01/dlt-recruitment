@@ -1,7 +1,7 @@
 {
   "scripts": {
     "clean": "hardhat clean",
-    "compile": "hardhat compile",
+    "compile": "hardhat compile --force",
     "console": "hardhat console",
     "deploy": "hardhat run scripts/deploy.js",
     "node": "hardhat node > logs.txt",
