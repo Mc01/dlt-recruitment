@@ -4,11 +4,18 @@ pragma solidity >=0.6.0 <0.8.0;
 import "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/math/SafeMathUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
 
 /**
  * @dev Extension of {ERC20} that adds staking mechanism.
+ *
+ * Staking should allow any token holder to temporarily lock-in their funds in the contract 
+ * by calling method “stake”. To withdraw staked tokens, their owner should be able to use “unstake”
+ * method to do so. To receive reward for staking, the method “reward” should be used. 
+ * Annual interest rate is hardcoded and set to 10%.
+ *
  */
-contract CustomToken is ERC20Upgradeable, OwnableUpgradeable {
+contract CustomToken is ERC20Upgradeable, OwnableUpgradeable, ReentrancyGuardUpgradeable {
     using SafeMathUpgradeable for uint256;
 
     uint256 internal _minTotalSupply;
@@ -20,6 +27,8 @@ contract CustomToken is ERC20Upgradeable, OwnableUpgradeable {
     uint256 internal _stakeMinAmount;
     uint256 internal _stakePrecision;
 
+    // Structs are not fully supported by upgrades
+    // https://github.com/OpenZeppelin/openzeppelin-upgrades/issues/95
     mapping(address => uint256[]) internal _stakesAmount;
     mapping(address => uint64[]) internal _stakesTime;
 
@@ -31,6 +40,7 @@ contract CustomToken is ERC20Upgradeable, OwnableUpgradeable {
         uint8 stakePrecision
     ) public initializer {
         OwnableUpgradeable.__Ownable_init();
+        ReentrancyGuardUpgradeable.__ReentrancyGuard_init();
 
         _minTotalSupply = minTotalSupply;
         _maxTotalSupply = maxTotalSupply;
@@ -57,7 +67,16 @@ contract CustomToken is ERC20Upgradeable, OwnableUpgradeable {
         return stake;
     }
 
-    function stakeAll() public returns (bool) {
+    /*
+     *
+     * nonReentrant might not be needed
+     * but in case of Upgradeable contracts 
+     * it is good convention for public non-view methods
+     *
+     */
+
+    function stakeAll() public 
+    nonReentrant returns (bool) {
         _stake(
             _msgSender(), 
             balanceOf(_msgSender())
@@ -65,33 +84,67 @@ contract CustomToken is ERC20Upgradeable, OwnableUpgradeable {
         return true;
     }
 
-    function unstakeAll() public returns (bool) {
+    function unstakeAll() public
+    nonReentrant returns (bool) {
         _unstake(_msgSender());
         return true;
     }
 
-    function reward() public returns (bool) {
+    function reward() public
+    nonReentrant returns (bool) {
         _reward(_msgSender());
         return true;
     }
 
-    // This method should allow adding on to user's stake.
-    // Any required constrains and checks should be coded as well.
     function _stake(address sender, uint256 amount) internal {
-        // TODO implement this method
+        require(
+            balanceOf(sender) >= amount,
+            "Sender does not have enough funds"
+        );
+
+        // Decrease balance
+        _decreaseBalance(sender, amount);
+        
+        // Update storage
+        _stakesAmount[sender].push(amount);
+        _stakesTime[sender].push(block.timestamp);
     }
 
-    // This method should allow withdrawing staked funds
-    // Any required constrains and checks should be coded as well.
     function _unstake(address sender) internal {
-        // TODO implement this method
+        require(
+            _stakesAmount[sender].length > 0,
+            "User does not have staked funds"
+        );
+        
+        // Calculate cumulative amount
+        uint256 cumulativeAmount;
+        for (uint i = 0; i < _stakesAmount[sender].length; i++) {
+            cumulativeAmount = cumulativeAmount.add(_stakesAmount[sender][i]);
+        }
+
+        // Clear storage
+        _stakesAmount[sender] = [];
+        _stakesTime[sender] = [];
+
+        // Increase balance
+        _increaseBalance(sender, cumulativeAmount);
     }
 
-    // This method should allow withdrawing cumulated reward for all staked funds of the user's.
-    // Any required constrains and checks should be coded as well.
-    // Important! Withdrawing reward should not decrease the stake, stake should be rolled over for the future automatically.
     function _reward(address _address) internal {
-        // TODO implement this method
+        require(
+            _stakesAmount[_address].length > 0,
+            "User does not have staked funds"
+        );
+
+        // Get reward
+        uint256 reward = _getProofOfStakeReward(_address);
+
+        // Increase balance
+        _increaseBalance(_address, reward);
+
+        // TODO: Set stake as withdrawn for this year
+        // To do this optimally I'm leaving suggested change
+        // In comment in _getCoinAge() method
     }
 
     function _getProofOfStakeReward(address _address) internal view returns (uint256) {
@@ -121,6 +174,12 @@ contract CustomToken is ERC20Upgradeable, OwnableUpgradeable {
             if (nCoinSeconds > _stakeMaxAge) nCoinSeconds = _stakeMaxAge;
 
             _coinAge = _coinAge.add(uint256(_stakesAmount[_address][i]).mul(nCoinSeconds.div(1 days)));
+
+            // TODO: Suggestion
+            // To mark stake as rewarded 
+            // I would set _stakesTime[_address][i] to block.timestamp
+            // During iteration in this method
+            // To avoid another loop after increasing balance with reward
         }
 
         return _coinAge;
