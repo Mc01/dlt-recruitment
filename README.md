@@ -40,3 +40,13 @@ Run testing suite
 ```
 npm test
 ```
+
+## TODO
+
+To make this project even more complete - following could be added:
+- Improving Solidity contract even more
+- Running Mythril security scanner
+- Writing tests
+- Writing deployment script
+- Forking mainnet and performing gas usage optimisations
+- Requesting audit from 3rd party
